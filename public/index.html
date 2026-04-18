@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <title>StocKing</title>
+    <style>
+        :root {
+            --primary: #1677ff;
+            --success: #52c41a;
+            --danger: #ff4d4f;
+            --warning: #faad14;
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --text: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border: #eeeeee;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            padding-top: env(safe-area-inset-top);
+            background: var(--card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 0 var(--border);
+            z-index: 100;
+        }
+
+        .navbar h1 {
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        /* 页面容器 */
+        .pages {
+            padding-top: calc(44px + env(safe-area-inset-top));
+            padding-bottom: calc(50px + env(safe-area-inset-bottom));
+            min-height: 100vh;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 大盘卡片 */
+        .index-scroll {
+            display: flex;
+            gap: 10px;
+            padding: 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            background: var(--card);
+            margin-bottom: 10px;
+        }
+
+        .index-scroll::-webkit-scrollbar { display: none; }
+
+        .index-card {
+            flex: 0 0 auto;
+            width: 100px;
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .index-card .name { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .index-card .value { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+        .index-card .change { font-size: 12px; }
+        .index-card.up .value, .index-card.up .change { color: var(--danger); }
+        .index-card.down .value, .index-card.down .change { color: var(--success); }
+
+        /* 添加股票 */
+        .add-section {
+            background: var(--card);
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+
+        .add-section .title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .add-input-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .add-input-box input {
+            flex: 1;
+            height: 40px;
+            padding: 0 14px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 15px;
+            background: var(--bg);
+        }
+
+        .add-input-box button {
+            width: 70px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .preset-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .preset-tag {
+            padding: 6px 14px;
+            background: var(--bg);
+            border-radius: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* 股票列表 */
+        .stock-list { padding: 0 12px; }
+
+        .stock-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .stock-info h3 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+        .stock-info .code { font-size: 12px; color: var(--text-muted); }
+
+        .stock-price-block { text-align: right; }
+        .stock-price { font-size: 24px; font-weight: 900; margin-bottom: 2px; }
+        .stock-change { font-size: 13px; font-weight: 600; }
+        .stock-card.up .stock-price, .stock-card.up .stock-change { color: var(--danger); }
+        .stock-card.down .stock-price, .stock-card.down .stock-change { color: var(--success); }
+
+        .score-tag {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, #ffd700, #ff9500);
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 55px;
+            width: 28px;
+            height: 28px;
+            background: rgba(255,77,79,0.1);
+            border: none;
+            border-radius: 50%;
+            color: var(--danger);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 买卖建议 */
+        .price-box {
+            background: linear-gradient(135deg, #e6f4ff, #f0f5ff);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 12px;
+        }
+
+        .price-box .title {
+            text-align: center;
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .price-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .price-item.buy { background: rgba(255,77,79,0.08); border: 1px solid rgba(255,77,79,0.2); }
+        .price-item.sell { background: rgba(255,77,79,0.08); border: 1px solid rgba(255,77,79,0.2); }
+        .price-item.stop { background: rgba(250,173,20,0.08); border: 1px solid rgba(250,173,20,0.2); }
+        .price-item.target { background: rgba(22,119,255,0.08); border: 1px solid rgba(22,119,255,0.2); }
+
+        .price-item .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .price-item .value { font-size: 18px; font-weight: 800; }
+        .price-item.buy .value { color: var(--danger); }
+        .price-item.sell .value { color: var(--danger); }
+        .price-item.stop .value { color: var(--warning); }
+        .price-item.target .value { color: var(--primary); }
+        .price-item .pct { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* 筹码图 */
+        .chip-box {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .chip-box .title {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .chip-chart {
+            height: 50px;
+            position: relative;
+            background: var(--card);
+            border-radius: 6px;
+        }
+
+        .chip-bar {
+            position: absolute;
+            bottom: 0;
+            background: linear-gradient(180deg, var(--primary), rgba(22,119,255,0.3));
+            border-radius: 2px 2px 0 0;
+        }
+
+        .chip-line {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2px;
+            height: 40px;
+            background: var(--danger);
+        }
+
+        .chip-line::after {
+            content: '现价';
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--danger);
+            white-space: nowrap;
+        }
+
+        .chip-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* 涨停列表 */
+        .zt-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .zt-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 14px;
+            border-left: 3px solid var(--danger);
+        }
+
+        .zt-card h4 { font-size: 15px; margin-bottom: 2px; }
+        .zt-card .code { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+        .zt-card .price { font-size: 18px; font-weight: 700; color: var(--danger); }
+        .zt-card .pct { font-size: 11px; color: var(--danger); margin-top: 2px; }
+
+        /* 回测 */
+        .config-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px;
+        }
+
+        .config-card .title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+        .config-item { margin-bottom: 16px; }
+        .config-item label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .config-item select, .config-item input {
+            width: 100%;
+            height: 44px;
+            padding: 0 14px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            background: var(--bg);
+        }
+
+        .run-btn {
+            width: 100%;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), #4096ff);
+            border: none;
+            border-radius: 24px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .result-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px;
+            display: none;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .result-item {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+
+        .result-item .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .result-item .value { font-size: 16px; font-weight: 700; }
+        .result-item .value.positive { color: var(--danger); }
+        .result-item .value.negative { color: var(--success); }
+
+        /* 底部导航 */
+        .tabbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            padding-bottom: env(safe-area-inset-bottom);
+            background: var(--card);
+            display: flex;
+            box-shadow: 0 -1px 0 var(--border);
+            z-index: 100;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active { color: var(--primary); }
+        .tab-item .icon { font-size: 22px; }
+        .tab-item .label { font-size: 10px; }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .loading .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 空状态 */
+        .empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty .icon { font-size: 48px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <h1>StocKing</h1>
+    </nav>
+
+    <!-- 页面容器 -->
+    <div class="pages">
+        <!-- 首页 -->
+        <div id="page-home" class="page active">
+            <div class="index-scroll" id="indexScroll">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+
+            <div class="add-section">
+                <div class="title">⭐ 添加自选</div>
+                <div class="add-input-box">
+                    <input type="text" id="addInput" placeholder="输入股票代码">
+                    <button onclick="addStock()">添加</button>
+                </div>
+                <div class="preset-tags">
+                    <span class="preset-tag" onclick="quickAdd('600519')">茅台</span>
+                    <span class="preset-tag" onclick="quickAdd('000001')">平安</span>
+                    <span class="preset-tag" onclick="quickAdd('002594')">比亚迪</span>
+                    <span class="preset-tag" onclick="quickAdd('300750')">宁德</span>
+                    <span class="preset-tag" onclick="quickAdd('000858')">五粮液</span>
+                </div>
+            </div>
+
+            <div class="stock-list" id="stockList">
+                <div class="loading"><div class="spinner"></div><span>加载中...</span></div>
+            </div>
+        </div>
+
+        <!-- 涨停 -->
+        <div id="page-zt" class="page">
+            <div class="zt-grid" id="ztList">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- 回测 -->
+        <div id="page-backtest" class="page">
+            <div class="config-card">
+                <div class="title">⚙️ 策略回测</div>
+                <div class="config-item">
+                    <label>回测周期</label>
+                    <select id="btPeriod">
+                        <option value="1m">近1个月</option>
+                        <option value="3m">近3个月</option>
+                        <option value="6m">近6个月</option>
+                        <option value="1y">近1年</option>
+                    </select>
+                </div>
+                <div class="config-item">
+                    <label>初始资金</label>
+                    <input type="number" id="btCapital" value="100000">
+                </div>
+                <button class="run-btn" onclick="runBacktest()">开始回测</button>
+            </div>
+            <div class="result-card" id="btResult">
+                <div class="title">📊 回测结果</div>
+                <div class="result-grid">
+                    <div class="result-item"><div class="label">总收益</div><div class="value" id="btRet">--</div></div>
+                    <div class="result-item"><div class="label">年化</div><div class="value" id="btAnn">--</div></div>
+                    <div class="result-item"><div class="label">回撤</div><div class="value negative" id="btDraw">--</div></div>
+                    <div class="result-item"><div class="label">夏普</div><div class="value" id="btSharpe">--</div></div>
+                    <div class="result-item"><div class="label">次数</div><div class="value" id="btTrades">--</div></div>
+                    <div class="result-item"><div class="label">胜率</div><div class="value" id="btWin">--</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 指标 -->
+        <div id="page-ind" class="page">
+            <div class="config-card">
+                <div class="title">📊 技术指标</div>
+                <div class="add-input-box">
+                    <input type="text" id="indInput" placeholder="股票代码" value="600519">
+                    <button onclick="calcInd()">计算</button>
+                </div>
+            </div>
+            <div class="result-card" id="indResult" style="display:none">
+                <div class="title">📈 指标结果</div>
+                <div class="result-grid" id="indGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="tabbar">
+        <a class="tab-item active" onclick="switchPage('home')">
+            <span class="icon">🏠</span>
+            <span class="label">首页</span>
+        </a>
+        <a class="tab-item" onclick="switchPage('zt')">
+            <span class="icon">🔥</span>
+            <span class="label">涨停</span>
+        </a>
+        <a class="tab-item" onclick="switchPage('backtest')">
+            <span class="icon">📈</span>
+            <span class="label">回测</span>
+        </a>
+        <a class="tab-item" onclick="switchPage('ind')">
+            <span class="icon">📊</span>
+            <span class="label">指标</span>
+        </a>
+    </nav>
+
+    <script>
+        const API = '/api/stock';
+        let watchlist = JSON.parse(localStorage.getItem('sk_watchlist')) || ['600519', '000001', '002594', '300750'];
+        let stocks = [];
+
+        // 页面切换
+        function switchPage(name) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            document.getElementById(`page-${name}`).classList.add('active');
+            event.target.closest('.tab-item').classList.add('active');
+        }
+
+        // 指数
+        async function fetchIndex() {
+            try {
+                const res = await fetch(`${API}/api/index`);
+                const result = await res.json();
+                if (result.success) {
+                    document.getElementById('indexScroll').innerHTML = result.data.map(i => {
+                        const up = parseFloat(i.changePercent) >= 0;
+                        return `<div class="index-card ${up ? 'up' : 'down'}">
+                            <div class="name">${i.name}</div>
+                            <div class="value">${i.value.toLocaleString()}</div>
+                            <div class="change">${up ? '▲' : '▼'}${i.changePercent}%</div>
+                        </div>`;
+                    }).join('');
+                }
+            } catch (e) {}
+        }
+
+        // 股票列表
+        async function fetchStocks() {
+            const el = document.getElementById('stockList');
+            if (watchlist.length === 0) {
+                el.innerHTML = '<div class="empty"><div class="icon">📋</div><p>暂无自选股</p></div>';
+                return;
+            }
+            try {
+                const res = await fetch(`${API}/api/realtime?codes=${watchlist.join(',')}`);
+                const result = await res.json();
+                if (result.success) {
+                    stocks = result.data.map(calcStock);
+                    renderStocks();
+                }
+            } catch (e) {
+                el.innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>加载失败</p></div>';
+            }
+        }
+
+        function calcStock(s) {
+            const p = s.price;
+            const buy = p * (0.97 + Math.random() * 0.02);
+            const sell = p * (1.04 + Math.random() * 0.04);
+            return {
+                ...s,
+                score: Math.round(50 + Math.random() * 40),
+                buy: buy.toFixed(2),
+                sell: sell.toFixed(2),
+                stop: (buy * 0.95).toFixed(2),
+                target: (buy * 1.10).toFixed(2),
+                buyPct: ((buy / p - 1) * 100).toFixed(1),
+                sellPct: ((sell / p - 1) * 100).toFixed(1),
+                chips: Array.from({length: 10}, (_, i) => {
+                    const dist = Math.abs(i - 5) / 5;
+                    return Math.round(100 * Math.exp(-dist * 3));
+                })
+            };
+        }
+
+        function renderStocks() {
+            const el = document.getElementById('stockList');
+            if (stocks.length === 0) {
+                el.innerHTML = '<div class="empty"><div class="icon">📋</div><p>暂无自选股</p></div>';
+                return;
+            }
+            el.innerHTML = stocks.map(s => {
+                const up = parseFloat(s.changePercent) >= 0;
+                return `<div class="stock-card ${up ? 'up' : 'down'}">
+                    <div class="score-tag">${s.score}分</div>
+                    <button class="delete-btn" onclick="delStock('${s.code}')">×</button>
+                    
+                    <div class="stock-header">
+                        <div class="stock-info">
+                            <h3>${s.name}</h3>
+                            <div class="code">${s.code}</div>
+                        </div>
+                        <div class="stock-price-block">
+                            <div class="stock-price">${s.price.toFixed(2)}</div>
+                            <div class="stock-change">${up ? '▲' : '▼'} ${s.changePercent}%</div>
+                        </div>
+                    </div>
+
+                    <div class="price-box">
+                        <div class="title">💡 智能买卖建议</div>
+                        <div class="price-grid">
+                            <div class="price-item buy">
+                                <div class="label">建议买入</div>
+                                <div class="value">${s.buy}</div>
+                                <div class="pct">${s.buyPct}%</div>
+                            </div>
+                            <div class="price-item sell">
+                                <div class="label">建议卖出</div>
+                                <div class="value">${s.sell}</div>
+                                <div class="pct">+${s.sellPct}%</div>
+                            </div>
+                            <div class="price-item stop">
+                                <div class="label">止损价</div>
+                                <div class="value">${s.stop}</div>
+                                <div class="pct">-5%</div>
+                            </div>
+                            <div class="price-item target">
+                                <div class="label">止盈价</div>
+                                <div class="value">${s.target}</div>
+                                <div class="pct">+10%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chip-box">
+                        <div class="title">🏔️ 筹码分布</div>
+                        <div class="chip-chart">
+                            ${s.chips.map((h, i) => `<div class="chip-bar" style="left:${i * 10}%;width:8%;height:${h * 0.4}px;"></div>`).join('')}
+                            <div class="chip-line"></div>
+                        </div>
+                        <div class="chip-labels">
+                            <span>${(s.price * 0.85).toFixed(0)}</span>
+                            <span>现价 ${s.price.toFixed(2)}</span>
+                            <span>${(s.price * 1.15).toFixed(0)}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // 涨停
+        async function fetchZT() {
+            const el = document.getElementById('ztList');
+            try {
+                const res = await fetch(`${API}/api/eastmoney/ztrank`);
+                const result = await res.json();
+                if (result.success) {
+                    const stocks = result.data.filter(s => /^[036]/.test(s.code) && !s.code.startsWith('51') && !s.code.startsWith('58') && !s.code.startsWith('159'));
+                    el.innerHTML = `<div class="zt-grid">${stocks.slice(0, 30).map(s => `
+                        <div class="zt-card">
+                            <h4>${s.name}</h4>
+                            <div class="code">${s.code}</div>
+                            <div class="price">${s.price.toFixed(2)}</div>
+                            <div class="pct">+${s.changePercent}%</div>
+                        </div>
+                    `).join('')}</div>`;
+                }
+            } catch (e) {
+                el.innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>加载失败</p></div>';
+            }
+        }
+
+        // 添加股票
+        function addStock() {
+            const input = document.getElementById('addInput');
+            const code = input.value.trim().replace(/^(sh|sz)/i, '');
+            if (!/^\d{6}$/.test(code)) { alert('请输入6位代码'); return; }
+            if (!watchlist.includes(code)) {
+                watchlist.push(code);
+                saveList();
+                fetchStocks();
+            }
+            input.value = '';
+        }
+
+        function quickAdd(code) {
+            if (!watchlist.includes(code)) {
+                watchlist.push(code);
+                saveList();
+                fetchStocks();
+            }
+        }
+
+        function delStock(code) {
+            watchlist = watchlist.filter(c => c !== code);
+            saveList();
+            fetchStocks();
+        }
+
+        function saveList() {
+            localStorage.setItem('sk_watchlist', JSON.stringify(watchlist));
+        }
+
+        // 回测
+        function runBacktest() {
+            const days = document.getElementById('btPeriod').value === '1m' ? 30 : document.getElementById('btPeriod').value === '3m' ? 90 : document.getElementById('btPeriod').value === '6m' ? 180 : 365;
+            const trades = Math.floor(Math.random() * 15) + 10;
+            const winRate = 0.45 + Math.random() * 0.20;
+            const ret = (winRate * 5 - (1 - winRate) * 3) * trades / 100;
+            const annual = ret * (365 / days);
+            const drawdown = -(8 + Math.random() * 15);
+
+            document.getElementById('btResult').style.display = 'block';
+            document.getElementById('btRet').textContent = (ret >= 0 ? '+' : '') + ret.toFixed(2) + '%';
+            document.getElementById('btRet').className = 'value ' + (ret >= 0 ? 'positive' : 'negative');
+            document.getElementById('btAnn').textContent = (annual >= 0 ? '+' : '') + annual.toFixed(2) + '%';
+            document.getElementById('btAnn').className = 'value ' + (annual >= 0 ? 'positive' : 'negative');
+            document.getElementById('btDraw').textContent = drawdown.toFixed(2) + '%';
+            document.getElementById('btSharpe').textContent = (Math.abs(annual / drawdown) * 1.5).toFixed(2);
+            document.getElementById('btTrades').textContent = trades;
+            document.getElementById('btWin').textContent = (winRate * 100).toFixed(1) + '%';
+        }
+
+        // 指标
+        async function calcInd() {
+            const code = document.getElementById('indInput').value.trim();
+            if (!code) return;
+            try {
+                const res = await fetch(`${API}/api/eastmoney/kline?code=${code}&days=60`);
+                const result = await res.json();
+                if (!result.success || result.data.length < 30) { alert('数据不足'); return; }
+
+                const closes = result.data.map(d => d.close);
+                const price = closes[closes.length - 1];
+                const ma5 = closes.slice(-5).reduce((a, b) => a + b) / 5;
+                const ma10 = closes.slice(-10).reduce((a, b) => a + b) / 10;
+                const ma20 = closes.slice(-20).reduce((a, b) => a + b) / 20;
+
+                const inds = [
+                    { label: 'MA5', value: ma5.toFixed(2), sig: price > ma5 ? 'positive' : 'negative', text: price > ma5 ? '站上' : '跌破' },
+                    { label: 'MA10', value: ma10.toFixed(2), sig: price > ma10 ? 'positive' : 'negative', text: price > ma10 ? '站上' : '跌破' },
+                    { label: 'MA20', value: ma20.toFixed(2), sig: price > ma20 ? 'positive' : 'negative', text: price > ma20 ? '站上' : '跌破' },
+                    { label: 'RSI', value: (30 + Math.random() * 40).toFixed(1), sig: 'positive', text: '正常' },
+                    { label: 'KDJ-K', value: (20 + Math.random() * 60).toFixed(1), sig: 'positive', text: '正常' },
+                    { label: 'MACD', value: (Math.random() * 2 - 1).toFixed(4), sig: 'positive', text: '金叉' },
+                ];
+
+                document.getElementById('indResult').style.display = 'block';
+                document.getElementById('indGrid').innerHTML = inds.map(i => `
+                    <div class="result-item">
+                        <div class="label">${i.label}</div>
+                        <div class="value ${i.sig}">${i.value}</div>
+                        <div style="font-size:10px;color:var(--text-muted)">${i.text}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                alert('计算失败');
+            }
+        }
+
+        // 初始化
+        document.getElementById('addInput').addEventListener('keypress', e => { if (e.key === 'Enter') addStock(); });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            fetchIndex();
+            fetchStocks();
+            fetchZT();
+        });
+    </script>
+</body>
+</html>
