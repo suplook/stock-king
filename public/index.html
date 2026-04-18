@@ -562,7 +562,7 @@
     </nav>
 
     <script>
-        const API = '/api/stock';
+        const API = '/api';
         let watchlist = JSON.parse(localStorage.getItem('sk_watchlist')) || ['600519', '000001', '002594', '300750'];
         let stocks = [];
 
@@ -577,7 +577,7 @@
         // 指数
         async function fetchIndex() {
             try {
-                const res = await fetch(`${API}/api/index`);
+                const res = await fetch(`${API}/index`);
                 const result = await res.json();
                 if (result.success) {
                     document.getElementById('indexScroll').innerHTML = result.data.map(i => {
@@ -600,7 +600,7 @@
                 return;
             }
             try {
-                const res = await fetch(`${API}/api/realtime?codes=${watchlist.join(',')}`);
+                const res = await fetch(`${API}/realtime?codes=${watchlist.join(',')}`);
                 const result = await res.json();
                 if (result.success) {
                     stocks = result.data.map(calcStock);
@@ -700,7 +700,7 @@
         async function fetchZT() {
             const el = document.getElementById('ztList');
             try {
-                const res = await fetch(`${API}/api/eastmoney/ztrank`);
+                const res = await fetch(`${API}/eastmoney/ztrank`);
                 const result = await res.json();
                 if (result.success) {
                     const stocks = result.data.filter(s => /^[036]/.test(s.code) && !s.code.startsWith('51') && !s.code.startsWith('58') && !s.code.startsWith('159'));
@@ -774,7 +774,7 @@
             const code = document.getElementById('indInput').value.trim();
             if (!code) return;
             try {
-                const res = await fetch(`${API}/api/eastmoney/kline?code=${code}&days=60`);
+                const res = await fetch(`${API}/eastmoney/kline?code=${code}&days=60`);
                 const result = await res.json();
                 if (!result.success || result.data.length < 30) { alert('数据不足'); return; }
 
