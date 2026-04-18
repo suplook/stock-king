@@ -6,7 +6,13 @@ async function fetchGBK(url) {
     headers: { 'Referer': 'https://finance.sina.com.cn', 'User-Agent': USER_AGENT }
   });
   const buffer = await res.arrayBuffer();
-  return new TextDecoder('gbk').decode(buffer);
+  // Node.js 18+ supports 'gbk' in TextDecoder
+  try {
+    return new TextDecoder('gbk').decode(buffer);
+  } catch (e) {
+    // Fallback: try gb2312
+    return new TextDecoder('gb2312').decode(buffer);
+  }
 }
 
 export default async function handler(req, res) {
@@ -15,11 +21,13 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { action, codes, code, days } = req.query;
+  // Route by path: /api/stock/api/index, /api/stock/api/realtime, /api/stock/api/eastmoney/ztrank etc.
+  const path = req.url.replace(/^\/api\/stock/, '').replace(/\?.*$/, '');
+  const { codes, code, days } = req.query;
 
   try {
     // 大盘指数
-    if (action === 'index') {
+    if (path === '/api/index') {
       const data = await fetchGBK('https://hq.sinajs.cn/list=sh000001,sz399001,sh000300,sz399006');
       const result = [];
       const lines = data.split('\n').filter(l => l.trim());
@@ -42,7 +50,7 @@ export default async function handler(req, res) {
     }
 
     // 实时行情
-    if (action === 'realtime' && codes) {
+    if (path === '/api/realtime' && codes) {
       const formatted = codes.split(',').map(c => {
         c = c.trim();
         if (c.startsWith('6')) return 'sh' + c;
@@ -74,8 +82,8 @@ export default async function handler(req, res) {
     }
 
     // 涨停板
-    if (action === 'ztrank') {
-      const response = await fetch('https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&fs=b:MK0021,b:MK0022,b:MK0023,b:MK0024&fields=f12,f14,f2,f3,f4,f15', {
+    if (path === '/api/eastmoney/ztrank') {
+      const response = await fetch('https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=200&fs=b:MK0021,b:MK0022,b:MK0023,b:MK0024&fields=f12,f14,f2,f3,f4,f15', {
         headers: { 'Referer': 'https://quote.eastmoney.com', 'User-Agent': USER_AGENT }
       });
       const json = await response.json();
@@ -89,7 +97,7 @@ export default async function handler(req, res) {
     }
 
     // K线
-    if (action === 'kline' && code) {
+    if (path === '/api/eastmoney/kline' && code) {
       const market = code.startsWith('6') ? 1 : 0;
       const response = await fetch(`https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${market}.${code}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=101&fqt=1&end=20500101&lmt=${days || 60}`, {
         headers: { 'Referer': 'https://quote.eastmoney.com', 'User-Agent': USER_AGENT }
@@ -102,8 +110,8 @@ export default async function handler(req, res) {
       return res.json({ success: true, data: result });
     }
 
-    return res.json({ success: false, error: '未知操作' });
+    return res.json({ success: false, error: '未知操作', path });
   } catch (e) {
-    return res.json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message, path });
   }
 }
